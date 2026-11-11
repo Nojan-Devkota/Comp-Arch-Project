@@ -1,12 +1,5 @@
-"""MNIST training/inference benchmark in TensorFlow (CS3339, Team 6).
-
-Runs the experiments from section 1.3 of our proposal: a baseline run plus
-thread, batch size and model sweeps, all on the CPU. Every measurement runs
-in a new Python process so the thread settings really apply to it.
-
-    python mnist_tf.py --study baseline --trials 1     # quick pilot
-    python mnist_tf.py --study all --trials 3          # everything
-"""
+"""Benchmarks MNIST training and inference in TensorFlow on the CPU.
+Runs the baseline, thread, batch size and model studies, each run in its own process."""
 
 import argparse
 import csv
@@ -21,7 +14,7 @@ import time
 from pathlib import Path
 from statistics import mean, median, stdev
 
-# Hidden layer widths. Every model takes 784 inputs and ends in 10 logits.
+# Hidden layer sizes for each model; all take 784 pixels in and give 10 digit scores.
 MODELS = {
     "baseline": (128,),     # 784-128-10
     "wide": (256,),         # 784-256-10
@@ -31,10 +24,10 @@ THREAD_SWEEP = (1, 2, 4, 8, 16, 32, 64, 128)
 BATCH_SWEEP = (32, 64, 128, 256)
 STUDIES = ("baseline", "threads", "batch", "models")
 
-# Same seed for every run, in both frameworks, so all trials of a condition
-# start from the same weights and only the timing/counters vary.
+# Fixed seed shared with the PyTorch script, so every trial starts from the same weights.
 SEED = 42
 
+# Columns written for every run, and the ones averaged in the summary file.
 FIELDS = [
     "framework", "framework_version", "python_version", "machine",
     "study", "model", "parameters", "threads", "batch_size", "epochs",
@@ -42,7 +35,6 @@ FIELDS = [
     "elapsed_seconds", "warmup_seconds", "seconds_per_epoch",
     "samples", "steps", "images_per_second", "test_accuracy", "load_avg_1min",
 ]
-# columns that get mean/std/median/min/max in the summary file
 NUMERIC_FIELDS = [
     "elapsed_seconds", "warmup_seconds", "seconds_per_epoch",
     "images_per_second", "test_accuracy",
@@ -50,6 +42,7 @@ NUMERIC_FIELDS = [
 
 
 def build_parser():
+    """Defines the command line options; the hidden ones are only passed to worker runs."""
     p = argparse.ArgumentParser(description="MNIST TensorFlow CPU experiments")
     p.add_argument("--study", choices=[*STUDIES, "all"], default="baseline")
     p.add_argument("--trials", type=int, default=3)
@@ -67,7 +60,6 @@ def build_parser():
     p.add_argument("--model-list", default=",".join(MODELS),
                    help="models for the models study: " + ", ".join(MODELS))
 
-    # Only used when the script starts itself as a worker for a single run.
     hidden = argparse.SUPPRESS
     p.add_argument("--worker", action="store_true", help=hidden)
     p.add_argument("--model", choices=list(MODELS), default="baseline", help=hidden)
@@ -80,10 +72,12 @@ def build_parser():
 
 
 def int_list(text):
+    """Turns "1,2,4" into [1, 2, 4]."""
     return [int(x) for x in text.split(",") if x.strip()]
 
 
 def check_args(p, a):
+    """Rejects bad values and converts the sweep options from text into lists."""
     if min(a.trials, a.epochs, a.batch_size, a.threads, a.train_samples) <= 0:
         p.error("trials, epochs, batch-size, threads and train-samples must be positive")
     if a.train_samples > 60000:
@@ -112,8 +106,8 @@ def parse_args(parser=None):
 
 
 def setup_tensorflow(threads, seed):
-    # The thread variables have to be set before TensorFlow (and NumPy) start
-    # their thread pools, so TensorFlow is only imported here.
+    """Limits TensorFlow and its math libraries to `threads` CPU threads, then imports it.
+    The environment variables only work if they are set before the import."""
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
     for var in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
@@ -129,7 +123,7 @@ def setup_tensorflow(threads, seed):
 
 
 def load_mnist(tf, train_samples):
-    """Flattened float32 images scaled to [0, 1], same as the PyTorch version."""
+    """Loads MNIST with each image flattened to 784 float32 pixels scaled to [0, 1]."""
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
     x_train = x_train[:train_samples].reshape(-1, 784).astype("float32") / 255.0
     y_train = y_train[:train_samples]
@@ -138,6 +132,8 @@ def load_mnist(tf, train_samples):
 
 
 def build_model(tf, name, learning_rate):
+    """Builds a fully connected ReLU network and sets it up for SGD
+    with cross-entropy loss on the raw output scores."""
     layers = [tf.keras.Input(shape=(784,))]
     for width in MODELS[name]:
         layers.append(tf.keras.layers.Dense(width, activation="relu"))
@@ -151,9 +147,8 @@ def build_model(tf, name, learning_rate):
 
 
 def training_dataset(tf, x, y, batch_size, threads):
-    # If fit() is given NumPy arrays, Keras builds its own tf.data pipeline
-    # with AUTOTUNE, and that uses extra threads sized to the whole machine.
-    # Building it ourselves keeps the 1-thread runs actually single threaded.
+    """Batches the training data with its thread pool capped at `threads`, so Keras
+    doesn't start extra data-loading threads sized to the whole machine."""
     data = tf.data.Dataset.from_tensor_slices((x, y)).batch(batch_size)
     options = tf.data.Options()
     options.threading.private_threadpool_size = threads
@@ -162,6 +157,7 @@ def training_dataset(tf, x, y, batch_size, threads):
 
 
 def predict(model, x, batch_size):
+    """Runs the model over `x` one batch at a time and returns the predicted digits."""
     import numpy as np
 
     labels = []
@@ -172,7 +168,7 @@ def predict(model, x, batch_size):
 
 
 class Stopwatch:
-    """Wall-clock timer for the part of a run we actually measure."""
+    """Measures wall-clock time for the code inside a `with` block."""
 
     def __enter__(self):
         self.start = time.perf_counter()
@@ -183,12 +179,8 @@ class Stopwatch:
 
 
 def run_worker(a, stopwatch=Stopwatch):
-    """One measurement: either training or inference, never both.
-
-    Start-up, data loading and warm-up happen outside the stopwatch.
-    The train run saves its weights so the inference run of the same
-    trial measures the same trained model.
-    """
+    """Times one phase (training or inference) and writes its results to a.row_file.
+    Training saves its weights so the matching inference run uses the same model."""
     tf = setup_tensorflow(a.threads, seed=SEED)
     import numpy as np
 
@@ -198,10 +190,8 @@ def run_worker(a, stopwatch=Stopwatch):
     if a.phase == "train":
         data = training_dataset(tf, x_train, y_train, a.batch_size, a.threads)
 
-        # The first fit() traces and compiles the training step, which is a
-        # one-time cost PyTorch's eager loop doesn't have. Run two batches to
-        # get that out of the way, then put the seeded weights back so the
-        # timed run still starts from scratch.
+        # Warm-up: the first fit() compiles the training step, so run 2 batches untimed,
+        # then restore the starting weights so the timed run begins from scratch.
         start_weights = model.get_weights()
         t0 = time.perf_counter()
         model.fit(data.take(2), epochs=1, shuffle=False, verbose=0)
@@ -209,6 +199,7 @@ def run_worker(a, stopwatch=Stopwatch):
         model.set_weights(start_weights)
         model.optimizer.iterations.assign(0)
 
+        # Timed training over all epochs, then accuracy is checked outside the timer.
         with stopwatch() as timer:
             model.fit(data, epochs=a.epochs, shuffle=False, verbose=0)
         model.save_weights(a.weights_file)
@@ -219,6 +210,7 @@ def run_worker(a, stopwatch=Stopwatch):
     else:
         model.load_weights(a.weights_file)
 
+        # Warm-up with one untimed batch, then time predictions on all 10,000 test images.
         t0 = time.perf_counter()
         model(x_test[:a.batch_size], training=False).numpy()
         warmup = time.perf_counter() - t0
@@ -228,6 +220,7 @@ def run_worker(a, stopwatch=Stopwatch):
         samples = len(x_test)
         steps = math.ceil(len(x_test) / a.batch_size)
 
+    # Result row: settings plus timing, throughput and accuracy for this phase.
     elapsed = timer.seconds
     accuracy = float(np.mean(predictions == y_test))
     row = dict.fromkeys(FIELDS, "")
@@ -248,8 +241,8 @@ def run_worker(a, stopwatch=Stopwatch):
         "elapsed_seconds": round(elapsed, 6),
         "warmup_seconds": round(warmup, 6),
         "seconds_per_epoch": round(elapsed / a.epochs, 6) if a.phase == "train" else "",
-        "samples": samples,    # images processed in the timed part
-        "steps": steps,        # optimizer updates (train) or forward batches (inference)
+        "samples": samples,    # images processed while timed
+        "steps": steps,        # weight updates (train) or batches predicted (inference)
         "images_per_second": round(samples / elapsed, 2),
         "test_accuracy": round(accuracy, 6),
     })
@@ -263,7 +256,7 @@ def run_worker(a, stopwatch=Stopwatch):
 
 
 def usable_cpus():
-    """Logical CPUs we're allowed to run on (respects taskset/cgroup limits)."""
+    """Counts the CPUs this process is allowed to use (respects taskset/cgroup limits)."""
     try:
         return len(os.sched_getaffinity(0))
     except AttributeError:
@@ -271,7 +264,8 @@ def usable_cpus():
 
 
 def plan_runs(a, cpus):
-    """List of (study, settings). Only the studied setting changes from the baseline."""
+    """Lists the (study, settings) pairs to run; each study changes one setting from the
+    baseline, and thread counts above the available CPUs are left out."""
     base = {"threads": a.threads, "batch_size": a.batch_size, "model": "baseline"}
     studies = STUDIES if a.study == "all" else [a.study]
     plan = []
@@ -279,7 +273,6 @@ def plan_runs(a, cpus):
         if study == "baseline":
             changes = [{}]
         elif study == "threads":
-            # never ask for more threads than the machine has
             changes = [{"threads": n} for n in a.thread_list if n <= cpus]
         elif study == "batch":
             changes = [{"batch_size": n} for n in a.batch_list]
@@ -295,10 +288,8 @@ def read_row(path):
 
 
 def run_in_new_process(worker_args, tag, script=None, wrapper=()):
-    """Run this script (or `script`) as a worker and return the row it writes.
-
-    `wrapper` is put in front of the python command, e.g. a profiler.
-    """
+    """Starts a fresh Python process for one run and returns the result row it writes.
+    `wrapper` is an optional command placed in front of python, such as a profiler."""
     script = Path(script or __file__).resolve()
     with tempfile.TemporaryDirectory(prefix="tf_run_") as temp:
         row_file = Path(temp) / "row.csv"
@@ -314,6 +305,7 @@ def run_in_new_process(worker_args, tag, script=None, wrapper=()):
 
 
 def read_text(path):
+    """Returns a file's contents, or "" if it can't be read."""
     try:
         return Path(path).read_text().strip()
     except OSError:
@@ -321,7 +313,7 @@ def read_text(path):
 
 
 def write_system_info(out, cpus, extra=""):
-    """Machine, OS and library details for the report (proposal 1.2)."""
+    """Saves the machine, OS, CPU and library details to system_info.txt for the report."""
     lines = [
         f"Python: {platform.python_version()} ({sys.executable})",
         f"Machine: {platform.machine()}",
@@ -330,7 +322,7 @@ def write_system_info(out, cpus, extra=""):
         + os.environ.get("TF_ENABLE_ONEDNN_OPTS", "unset (TensorFlow default)"),
     ]
 
-    # ask a separate python for the versions so TensorFlow isn't loaded here
+    # Library versions are read in a separate process so TensorFlow isn't loaded here.
     versions = subprocess.run(
         [sys.executable, "-c",
          "import numpy, tensorflow as tf; "
@@ -342,7 +334,7 @@ def write_system_info(out, cpus, extra=""):
     )
     lines += ["", "== library versions ==", (versions.stdout or versions.stderr).strip()]
 
-    # frequency scaling / turbo settings affect timing, so keep them too
+    # OS release plus CPU frequency governor and turbo settings, which affect timing.
     for path in ("/etc/os-release",
                  "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
                  "/sys/devices/system/cpu/intel_pstate/no_turbo",
@@ -351,6 +343,7 @@ def write_system_info(out, cpus, extra=""):
         if text:
             lines += ["", f"== {path} ==", text]
 
+    # Kernel, CPU layout and memory size.
     for cmd in (["uname", "-a"], ["lscpu"], ["free", "-h"]):
         if shutil.which(cmd[0]):
             result = subprocess.run(cmd, capture_output=True, text=True)
@@ -362,6 +355,7 @@ def write_system_info(out, cpus, extra=""):
 
 
 def save_runs(path, rows, fields):
+    """Writes one CSV row per run."""
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields, restval="", extrasaction="ignore")
         writer.writeheader()
@@ -369,7 +363,8 @@ def save_runs(path, rows, fields):
 
 
 def save_summary(path, rows, numeric_fields):
-    """Mean, std, median, min and max of every condition over its trials."""
+    """Groups runs by condition and writes the mean, std, median, min and max of each
+    numeric column over the trials."""
     group_by = ("study", "model", "threads", "batch_size", "epochs", "phase")
     stats = ("mean", "std", "median", "min", "max")
     groups = {}
@@ -388,7 +383,7 @@ def save_summary(path, rows, numeric_fields):
             for field in numeric_fields:
                 values = [float(r[field]) for r in group if r.get(field) not in ("", None)]
                 if not values:
-                    continue    # e.g. seconds_per_epoch for inference rows
+                    continue    # column is blank for this phase, e.g. seconds_per_epoch
                 entry[f"{field}_mean"] = round(mean(values), 6)
                 entry[f"{field}_std"] = round(stdev(values), 6) if len(values) > 1 else ""
                 entry[f"{field}_median"] = round(median(values), 6)
@@ -398,6 +393,8 @@ def save_summary(path, rows, numeric_fields):
 
 
 def run_study(a, run_once=run_in_new_process, fields=FIELDS, numeric_fields=NUMERIC_FIELDS):
+    """Runs every planned condition for each trial (training, then inference) and
+    saves the results after each run."""
     out = Path(a.output).resolve()
     (out / "weights").mkdir(parents=True, exist_ok=True)
     cpus = usable_cpus()
@@ -415,9 +412,8 @@ def run_study(a, run_once=run_in_new_process, fields=FIELDS, numeric_fields=NUME
     rows = []
     order = 0
     for trial in range(1, a.trials + 1):
-        # Flip the order every other trial so slow drift (the CPU heating up,
-        # other people's jobs on the server) doesn't always land on the same
-        # settings.
+        # Odd trials go through the plan forwards and even trials backwards,
+        # so slow drift like CPU heat or server load doesn't always hit the same settings.
         for study, s in (plan if trial % 2 else plan[::-1]):
             name = f"{study}_{s['model']}_t{s['threads']}_b{s['batch_size']}_r{trial}"
             weights = out / "weights" / f"{name}.weights.h5"
@@ -441,8 +437,8 @@ def run_study(a, run_once=run_in_new_process, fields=FIELDS, numeric_fields=NUME
                 row["run_order"] = order
                 row["load_avg_1min"] = round(load, 2)
                 rows.append(row)
-                # rewrite both files after every run so a crash halfway
-                # through doesn't lose what's already been measured
+
+                # Both CSVs are rewritten after each run, so finished results survive a crash.
                 save_runs(out / "tensorflow_runs.csv", rows, fields)
                 save_summary(out / "tensorflow_summary.csv", rows, numeric_fields)
 
