@@ -1,7 +1,11 @@
 """MNIST training/inference benchmark in TensorFlow (CS3339, Team 6).
 
 Runs the experiments from section 1.3 of our proposal: a baseline run plus
-thread, batch size and model sweeps, all on the CPU.
+thread, batch size and model sweeps, all on the CPU. Every measurement runs
+in a new Python process so the thread settings really apply to it.
+
+    python mnist_tf.py --study baseline --trials 1     # quick pilot
+    python mnist_tf.py --study all --trials 3          # everything
 """
 
 import argparse
@@ -9,7 +13,11 @@ import csv
 import math
 import os
 import platform
+import subprocess
+import sys
+import tempfile
 import time
+from pathlib import Path
 
 # Hidden layer widths. Every model takes 784 inputs and ends in 10 logits.
 MODELS = {
@@ -243,7 +251,105 @@ def run_worker(a, stopwatch=Stopwatch):
           f"{samples / elapsed:.1f} images/s, accuracy {accuracy:.2%}")
 
 
+def usable_cpus():
+    """Logical CPUs we're allowed to run on (respects taskset/cgroup limits)."""
+    try:
+        return len(os.sched_getaffinity(0))
+    except AttributeError:
+        return os.cpu_count() or 1
+
+
+def plan_runs(a, cpus):
+    """List of (study, settings). Only the studied setting changes from the baseline."""
+    base = {"threads": a.threads, "batch_size": a.batch_size, "model": "baseline"}
+    studies = STUDIES if a.study == "all" else [a.study]
+    plan = []
+    for study in studies:
+        if study == "baseline":
+            changes = [{}]
+        elif study == "threads":
+            # never ask for more threads than the machine has
+            changes = [{"threads": n} for n in a.thread_list if n <= cpus]
+        elif study == "batch":
+            changes = [{"batch_size": n} for n in a.batch_list]
+        else:
+            changes = [{"model": m} for m in a.model_list]
+        plan += [(study, {**base, **c}) for c in changes]
+    return plan
+
+
+def read_row(path):
+    with open(path, newline="") as f:
+        return next(csv.DictReader(f))
+
+
+def run_in_new_process(worker_args, tag, script=None, wrapper=()):
+    """Run this script (or `script`) as a worker and return the row it writes.
+
+    `wrapper` is put in front of the python command, e.g. a profiler.
+    """
+    script = Path(script or __file__).resolve()
+    with tempfile.TemporaryDirectory(prefix="tf_run_") as temp:
+        row_file = Path(temp) / "row.csv"
+        cmd = [*wrapper, sys.executable, str(script), "--worker",
+               *worker_args, "--row-file", str(row_file)]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode:
+            print(result.stdout)
+            print(result.stderr, file=sys.stderr)
+            raise RuntimeError(f"{tag} failed, see the error output above")
+        print(result.stdout.strip())
+        return read_row(row_file)
+
+
+def run_study(a, run_once=run_in_new_process):
+    out = Path(a.output).resolve()
+    (out / "weights").mkdir(parents=True, exist_ok=True)
+    cpus = usable_cpus()
+    if a.threads > cpus:
+        sys.exit(f"--threads {a.threads} is more than the {cpus} CPUs available")
+
+    plan = plan_runs(a, cpus)
+    too_many = [n for n in a.thread_list if n > cpus]
+    if too_many and a.study in ("threads", "all"):
+        print(f"Skipping thread counts {too_many}, only {cpus} CPUs available")
+
+    total = len(plan) * a.trials * 2
+    rows = []
+    order = 0
+    for trial in range(1, a.trials + 1):
+        # Flip the order every other trial so slow drift (the CPU heating up,
+        # other people's jobs on the server) doesn't always land on the same
+        # settings.
+        for study, s in (plan if trial % 2 else plan[::-1]):
+            name = f"{study}_{s['model']}_t{s['threads']}_b{s['batch_size']}_r{trial}"
+            weights = out / "weights" / f"{name}.weights.h5"
+            for phase in ("train", "inference"):
+                order += 1
+                tag = f"{name}_{phase}"
+                load = os.getloadavg()[0]
+                print(f"[{order}/{total}] {tag} (load avg {load:.1f})", flush=True)
+                row = run_once([
+                    "--model", s["model"],
+                    "--threads", str(s["threads"]),
+                    "--batch-size", str(s["batch_size"]),
+                    "--epochs", str(a.epochs),
+                    "--learning-rate", str(a.learning_rate),
+                    "--train-samples", str(a.train_samples),
+                    "--phase", phase,
+                    "--study-name", study,
+                    "--trial", str(trial),
+                    "--weights-file", str(weights),
+                ], tag)
+                row["run_order"] = order
+                row["load_avg_1min"] = round(load, 2)
+                rows.append(row)
+    return rows
+
+
 if __name__ == "__main__":
     args = parse_args()
     if args.worker:
         run_worker(args)
+    else:
+        run_study(args)
