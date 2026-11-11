@@ -39,3 +39,26 @@ own Python process. Warm-up and data loading are not timed. Results go to
 
 `--thread-list`, `--batch-list` and `--model-list` override the sweep
 values, and `--train-samples` / `--epochs` can shrink runs for quick tests.
+
+## PyTorch benchmark
+
+`pytorch_mnist/mnist_torch.py` runs the same four studies with the same
+settings, options and CSV columns as the TensorFlow script, so the two result
+files can be merged directly. To keep the comparison fair it also matches:
+
+- starting weights: Glorot/Xavier uniform weights and zero biases (the Keras default)
+- seed 42, no shuffling, batches taken in order as slices of the data
+- the same warm-up (2 untimed training batches, 1 untimed inference batch)
+- the same inference loop (forward pass, `.numpy()` and `argmax` per batch)
+- 1 inter-op thread, with OMP/MKL threads set before PyTorch is imported
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+python pytorch_mnist/mnist_torch.py --study baseline --trials 1   # pilot
+python pytorch_mnist/mnist_torch.py --study all --trials 3        # full run
+```
+
+MNIST is downloaded once to `~/mnist-project/data` (change with
+`--data-dir`) before any run starts. Results go to `torch_results/`:
+`pytorch_runs.csv`, `pytorch_summary.csv` and `system_info.txt`.

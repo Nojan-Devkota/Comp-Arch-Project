@@ -7,3 +7,4 @@ venv/
 tf_results/
 torch_results/
 *.weights.h5
+*.pt
