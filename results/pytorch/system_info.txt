@@ -1,0 +1,94 @@
+Python: 3.10.12 (/home/Students/fwk14/torch-env/bin/python)
+Machine: x86_64
+Logical CPUs usable by this process: 128 (os.cpu_count() = 128)
+
+== library versions ==
+torch 2.14.1+cpu
+numpy 2.2.6
+ATen/Parallel:
+	at::get_num_threads() : 128
+	at::get_num_interop_threads() : 128
+OpenMP 201511 (a.k.a. OpenMP 4.5)
+	omp_get_max_threads() : 128
+Intel(R) oneAPI Math Kernel Library Version 2024.2-Product Build 20240605 for Intel(R) 64 architecture applications
+	mkl_get_max_threads() : 128
+Intel(R) MKL-DNN v3.12.0 (Git Hash 80afa71049cd69a3df32adcccb623b12cd7baa22)
+std::thread::hardware_concurrency() : 128
+Environment variables:
+	OMP_NUM_THREADS : [not set]
+	MKL_NUM_THREADS : [not set]
+ATen parallel backend: OpenMP
+
+== /etc/os-release ==
+PRETTY_NAME="Ubuntu 22.04.5 LTS"
+NAME="Ubuntu"
+VERSION_ID="22.04"
+VERSION="22.04.5 LTS (Jammy Jellyfish)"
+VERSION_CODENAME=jammy
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=jammy
+
+== /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor ==
+schedutil
+
+== /sys/devices/system/cpu/cpufreq/boost ==
+1
+
+$ uname -a
+Linux brooks 5.15.0-198-generic #208-Ubuntu SMP Fri Sep 4 10:22:38 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux
+
+$ lscpu
+Architecture:                            x86_64
+CPU op-mode(s):                          32-bit, 64-bit
+Address sizes:                           48 bits physical, 48 bits virtual
+Byte Order:                              Little Endian
+CPU(s):                                  128
+On-line CPU(s) list:                     0-127
+Vendor ID:                               AuthenticAMD
+Model name:                              AMD EPYC 7V13 64-Core Processor
+CPU family:                              25
+Model:                                   1
+Thread(s) per core:                      1
+Core(s) per socket:                      64
+Socket(s):                               2
+Stepping:                                1
+Frequency boost:                         enabled
+CPU max MHz:                             3719.5830
+CPU min MHz:                             1500.0000
+BogoMIPS:                                4900.01
+Flags:                                   fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 pcid sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 invpcid_single hw_pstate ssbd mba ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 invpcid cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr rdpru wbnoinvd amd_ppin arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold v_vmsave_vmload vgif v_spec_ctrl umip pku ospke vaes vpclmulqdq rdpid overflow_recov succor smca ibpb_exit_to_user
+Virtualization:                          AMD-V
+L1d cache:                               4 MiB (128 instances)
+L1i cache:                               4 MiB (128 instances)
+L2 cache:                                64 MiB (128 instances)
+L3 cache:                                512 MiB (16 instances)
+NUMA node(s):                            2
+NUMA node0 CPU(s):                       0-63
+NUMA node1 CPU(s):                       64-127
+Vulnerability Gather data sampling:      Not affected
+Vulnerability Indirect target selection: Not affected
+Vulnerability Itlb multihit:             Not affected
+Vulnerability L1tf:                      Not affected
+Vulnerability Mds:                       Not affected
+Vulnerability Meltdown:                  Not affected
+Vulnerability Mmio stale data:           Not affected
+Vulnerability Reg file data sampling:    Not affected
+Vulnerability Retbleed:                  Not affected
+Vulnerability Spec rstack overflow:      Mitigation; safe RET
+Vulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl and seccomp
+Vulnerability Spectre v1:                Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:                Mitigation; Retpolines; IBPB conditional; IBRS_FW; STIBP disabled; RSB filling; PBRSB-eIBRS Not affected; BHI Not affected
+Vulnerability Srbds:                     Not affected
+Vulnerability Tsa:                       Vulnerable: Clear CPU buffers attempted, no microcode
+Vulnerability Tsx async abort:           Not affected
+Vulnerability Vmscape:                   Mitigation; IBPB before exit to userspace
+
+$ free -h
+total        used        free      shared  buff/cache   available
+Mem:           503Gi       6.9Gi       444Gi        30Mi        51Gi       493Gi
+Swap:          8.0Gi          0B       8.0Gi

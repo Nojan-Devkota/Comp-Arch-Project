@@ -1,0 +1,3 @@
+perf_event_paranoid: -1
+perf version 5.15.216
+events available: task-clock, cycles, instructions, cache-references, cache-misses, branches, branch-misses, context-switches, cpu-migrations, page-faults

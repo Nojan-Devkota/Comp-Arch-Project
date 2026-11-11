@@ -1,0 +1,201 @@
+perf_event_paranoid: -1
+perf version 5.15.216
+events available: task-clock, cycles, instructions, cache-references, cache-misses, branches, branch-misses, context-switches, cpu-migrations, page-faults
+System details written to /home/Students/fwk14/Comp-Arch-Project/torch_results_final/system_info.txt
+[1/96] baseline_baseline_t1_b64_r1_train (load avg 0.1)
+train: 2.659s (warm-up 0.713s not counted), 112817.3 images/s, accuracy 92.23%
+[2/96] baseline_baseline_t1_b64_r1_inference (load avg 0.2)
+inference: 0.027s (warm-up 0.001s not counted), 366890.8 images/s, accuracy 92.23%
+[3/96] threads_baseline_t1_b64_r1_train (load avg 0.2)
+train: 2.653s (warm-up 0.710s not counted), 113091.5 images/s, accuracy 92.23%
+[4/96] threads_baseline_t1_b64_r1_inference (load avg 0.3)
+inference: 0.027s (warm-up 0.001s not counted), 369444.3 images/s, accuracy 92.23%
+[5/96] threads_baseline_t2_b64_r1_train (load avg 0.3)
+train: 2.997s (warm-up 0.712s not counted), 100110.5 images/s, accuracy 92.23%
+[6/96] threads_baseline_t2_b64_r1_inference (load avg 0.4)
+inference: 0.020s (warm-up 0.001s not counted), 487870.0 images/s, accuracy 92.23%
+[7/96] threads_baseline_t4_b64_r1_train (load avg 0.4)
+train: 2.461s (warm-up 0.729s not counted), 121923.4 images/s, accuracy 92.23%
+[8/96] threads_baseline_t4_b64_r1_inference (load avg 0.6)
+inference: 0.019s (warm-up 0.001s not counted), 539075.9 images/s, accuracy 92.23%
+[9/96] threads_baseline_t8_b64_r1_train (load avg 0.6)
+train: 2.188s (warm-up 0.712s not counted), 137107.5 images/s, accuracy 92.23%
+[10/96] threads_baseline_t8_b64_r1_inference (load avg 1.2)
+inference: 0.015s (warm-up 0.001s not counted), 684348.5 images/s, accuracy 92.23%
+[11/96] threads_baseline_t16_b64_r1_train (load avg 1.2)
+train: 2.648s (warm-up 0.706s not counted), 113298.5 images/s, accuracy 92.23%
+[12/96] threads_baseline_t16_b64_r1_inference (load avg 2.4)
+inference: 0.015s (warm-up 0.001s not counted), 656043.0 images/s, accuracy 92.23%
+[13/96] threads_baseline_t32_b64_r1_train (load avg 2.4)
+train: 2.953s (warm-up 0.716s not counted), 101604.3 images/s, accuracy 92.23%
+[14/96] threads_baseline_t32_b64_r1_inference (load avg 2.3)
+inference: 0.017s (warm-up 0.002s not counted), 578148.9 images/s, accuracy 92.23%
+[15/96] threads_baseline_t64_b64_r1_train (load avg 2.2)
+train: 3.766s (warm-up 0.717s not counted), 79654.2 images/s, accuracy 92.23%
+[16/96] threads_baseline_t64_b64_r1_inference (load avg 7.1)
+inference: 0.018s (warm-up 0.002s not counted), 559987.5 images/s, accuracy 92.23%
+[17/96] threads_baseline_t128_b64_r1_train (load avg 7.1)
+train: 4.084s (warm-up 0.718s not counted), 73453.3 images/s, accuracy 92.23%
+[18/96] threads_baseline_t128_b64_r1_inference (load avg 6.2)
+inference: 0.020s (warm-up 0.003s not counted), 496499.5 images/s, accuracy 92.23%
+[19/96] batch_baseline_t1_b32_r1_train (load avg 6.2)
+train: 4.072s (warm-up 0.701s not counted), 73677.5 images/s, accuracy 93.58%
+[20/96] batch_baseline_t1_b32_r1_inference (load avg 5.8)
+inference: 0.034s (warm-up 0.001s not counted), 298139.1 images/s, accuracy 93.58%
+[21/96] batch_baseline_t1_b64_r1_train (load avg 5.8)
+train: 2.664s (warm-up 0.702s not counted), 112628.2 images/s, accuracy 92.23%
+[22/96] batch_baseline_t1_b64_r1_inference (load avg 5.5)
+inference: 0.027s (warm-up 0.001s not counted), 368086.9 images/s, accuracy 92.23%
+[23/96] batch_baseline_t1_b128_r1_train (load avg 5.1)
+train: 1.948s (warm-up 0.702s not counted), 153999.6 images/s, accuracy 90.65%
+[24/96] batch_baseline_t1_b128_r1_inference (load avg 4.8)
+inference: 0.024s (warm-up 0.001s not counted), 410828.9 images/s, accuracy 90.65%
+[25/96] batch_baseline_t1_b256_r1_train (load avg 4.8)
+train: 1.605s (warm-up 0.712s not counted), 186942.6 images/s, accuracy 89.31%
+[26/96] batch_baseline_t1_b256_r1_inference (load avg 4.5)
+inference: 0.023s (warm-up 0.001s not counted), 435747.5 images/s, accuracy 89.31%
+[27/96] models_baseline_t1_b64_r1_train (load avg 4.5)
+train: 2.645s (warm-up 0.706s not counted), 113430.0 images/s, accuracy 92.23%
+[28/96] models_baseline_t1_b64_r1_inference (load avg 4.2)
+inference: 0.027s (warm-up 0.001s not counted), 365453.7 images/s, accuracy 92.23%
+[29/96] models_wide_t1_b64_r1_train (load avg 4.2)
+train: 3.977s (warm-up 0.713s not counted), 75434.2 images/s, accuracy 92.53%
+[30/96] models_wide_t1_b64_r1_inference (load avg 3.7)
+inference: 0.049s (warm-up 0.001s not counted), 205547.0 images/s, accuracy 92.53%
+[31/96] models_deep_t1_b64_r1_train (load avg 3.7)
+train: 3.080s (warm-up 0.708s not counted), 97402.1 images/s, accuracy 93.51%
+[32/96] models_deep_t1_b64_r1_inference (load avg 3.5)
+inference: 0.030s (warm-up 0.001s not counted), 330339.5 images/s, accuracy 93.51%
+[33/96] models_deep_t1_b64_r2_train (load avg 3.5)
+train: 3.071s (warm-up 0.705s not counted), 97684.9 images/s, accuracy 93.51%
+[34/96] models_deep_t1_b64_r2_inference (load avg 3.3)
+inference: 0.031s (warm-up 0.001s not counted), 326637.9 images/s, accuracy 93.51%
+[35/96] models_wide_t1_b64_r2_train (load avg 3.1)
+train: 3.979s (warm-up 0.699s not counted), 75401.3 images/s, accuracy 92.53%
+[36/96] models_wide_t1_b64_r2_inference (load avg 2.9)
+inference: 0.048s (warm-up 0.001s not counted), 206357.9 images/s, accuracy 92.53%
+[37/96] models_baseline_t1_b64_r2_train (load avg 2.9)
+train: 2.656s (warm-up 0.709s not counted), 112943.2 images/s, accuracy 92.23%
+[38/96] models_baseline_t1_b64_r2_inference (load avg 2.8)
+inference: 0.028s (warm-up 0.001s not counted), 363295.2 images/s, accuracy 92.23%
+[39/96] batch_baseline_t1_b256_r2_train (load avg 2.8)
+train: 1.609s (warm-up 0.709s not counted), 186461.9 images/s, accuracy 89.31%
+[40/96] batch_baseline_t1_b256_r2_inference (load avg 2.6)
+inference: 0.023s (warm-up 0.001s not counted), 437880.3 images/s, accuracy 89.31%
+[41/96] batch_baseline_t1_b128_r2_train (load avg 2.5)
+train: 1.951s (warm-up 0.710s not counted), 153795.3 images/s, accuracy 90.65%
+[42/96] batch_baseline_t1_b128_r2_inference (load avg 2.5)
+inference: 0.024s (warm-up 0.001s not counted), 413135.0 images/s, accuracy 90.65%
+[43/96] batch_baseline_t1_b64_r2_train (load avg 2.4)
+train: 2.646s (warm-up 0.709s not counted), 113359.9 images/s, accuracy 92.23%
+[44/96] batch_baseline_t1_b64_r2_inference (load avg 2.3)
+inference: 0.027s (warm-up 0.001s not counted), 363675.2 images/s, accuracy 92.23%
+[45/96] batch_baseline_t1_b32_r2_train (load avg 2.3)
+train: 4.074s (warm-up 0.701s not counted), 73630.0 images/s, accuracy 93.58%
+[46/96] batch_baseline_t1_b32_r2_inference (load avg 2.2)
+inference: 0.034s (warm-up 0.001s not counted), 297263.8 images/s, accuracy 93.58%
+[47/96] threads_baseline_t128_b64_r2_train (load avg 2.1)
+train: 4.077s (warm-up 0.726s not counted), 73575.9 images/s, accuracy 92.23%
+[48/96] threads_baseline_t128_b64_r2_inference (load avg 12.2)
+inference: 0.022s (warm-up 0.003s not counted), 444799.0 images/s, accuracy 92.23%
+[49/96] threads_baseline_t64_b64_r2_train (load avg 12.2)
+train: 3.365s (warm-up 0.715s not counted), 89145.3 images/s, accuracy 92.23%
+[50/96] threads_baseline_t64_b64_r2_inference (load avg 11.3)
+inference: 0.018s (warm-up 0.003s not counted), 569259.8 images/s, accuracy 92.23%
+[51/96] threads_baseline_t32_b64_r2_train (load avg 10.4)
+train: 3.147s (warm-up 0.709s not counted), 95333.8 images/s, accuracy 92.23%
+[52/96] threads_baseline_t32_b64_r2_inference (load avg 12.2)
+inference: 0.017s (warm-up 0.002s not counted), 605391.5 images/s, accuracy 92.23%
+[53/96] threads_baseline_t16_b64_r2_train (load avg 12.2)
+train: 2.659s (warm-up 0.712s not counted), 112839.7 images/s, accuracy 92.23%
+[54/96] threads_baseline_t16_b64_r2_inference (load avg 11.3)
+inference: 0.015s (warm-up 0.001s not counted), 660630.0 images/s, accuracy 92.23%
+[55/96] threads_baseline_t8_b64_r2_train (load avg 10.5)
+train: 2.189s (warm-up 0.702s not counted), 137048.5 images/s, accuracy 92.23%
+[56/96] threads_baseline_t8_b64_r2_inference (load avg 10.5)
+inference: 0.014s (warm-up 0.001s not counted), 694353.9 images/s, accuracy 92.23%
+[57/96] threads_baseline_t4_b64_r2_train (load avg 10.3)
+train: 2.512s (warm-up 0.704s not counted), 119450.1 images/s, accuracy 92.23%
+[58/96] threads_baseline_t4_b64_r2_inference (load avg 9.8)
+inference: 0.019s (warm-up 0.001s not counted), 533604.7 images/s, accuracy 92.23%
+[59/96] threads_baseline_t2_b64_r2_train (load avg 9.8)
+train: 2.954s (warm-up 0.712s not counted), 101572.3 images/s, accuracy 92.23%
+[60/96] threads_baseline_t2_b64_r2_inference (load avg 9.1)
+inference: 0.022s (warm-up 0.001s not counted), 453061.1 images/s, accuracy 92.23%
+[61/96] threads_baseline_t1_b64_r2_train (load avg 9.1)
+train: 2.666s (warm-up 0.707s not counted), 112549.2 images/s, accuracy 92.23%
+[62/96] threads_baseline_t1_b64_r2_inference (load avg 8.5)
+inference: 0.027s (warm-up 0.001s not counted), 369562.3 images/s, accuracy 92.23%
+[63/96] baseline_baseline_t1_b64_r2_train (load avg 7.9)
+train: 2.663s (warm-up 0.709s not counted), 112651.6 images/s, accuracy 92.23%
+[64/96] baseline_baseline_t1_b64_r2_inference (load avg 7.3)
+inference: 0.027s (warm-up 0.001s not counted), 367699.5 images/s, accuracy 92.23%
+[65/96] baseline_baseline_t1_b64_r3_train (load avg 7.3)
+train: 2.657s (warm-up 0.708s not counted), 112896.6 images/s, accuracy 92.23%
+[66/96] baseline_baseline_t1_b64_r3_inference (load avg 6.8)
+inference: 0.027s (warm-up 0.001s not counted), 369222.9 images/s, accuracy 92.23%
+[67/96] threads_baseline_t1_b64_r3_train (load avg 6.8)
+train: 2.675s (warm-up 0.710s not counted), 112165.8 images/s, accuracy 92.23%
+[68/96] threads_baseline_t1_b64_r3_inference (load avg 6.4)
+inference: 0.027s (warm-up 0.001s not counted), 366931.4 images/s, accuracy 92.23%
+[69/96] threads_baseline_t2_b64_r3_train (load avg 5.9)
+train: 3.038s (warm-up 0.707s not counted), 98740.9 images/s, accuracy 92.23%
+[70/96] threads_baseline_t2_b64_r3_inference (load avg 5.6)
+inference: 0.021s (warm-up 0.001s not counted), 475526.1 images/s, accuracy 92.23%
+[71/96] threads_baseline_t4_b64_r3_train (load avg 5.6)
+train: 2.571s (warm-up 0.711s not counted), 116701.8 images/s, accuracy 92.23%
+[72/96] threads_baseline_t4_b64_r3_inference (load avg 5.2)
+inference: 0.019s (warm-up 0.001s not counted), 530966.6 images/s, accuracy 92.23%
+[73/96] threads_baseline_t8_b64_r3_train (load avg 5.2)
+train: 2.196s (warm-up 0.704s not counted), 136636.4 images/s, accuracy 92.23%
+[74/96] threads_baseline_t8_b64_r3_inference (load avg 4.9)
+inference: 0.015s (warm-up 0.001s not counted), 649833.7 images/s, accuracy 92.23%
+[75/96] threads_baseline_t16_b64_r3_train (load avg 4.6)
+train: 2.604s (warm-up 0.713s not counted), 115187.2 images/s, accuracy 92.23%
+[76/96] threads_baseline_t16_b64_r3_inference (load avg 5.5)
+inference: 0.015s (warm-up 0.001s not counted), 664765.7 images/s, accuracy 92.23%
+[77/96] threads_baseline_t32_b64_r3_train (load avg 5.5)
+train: 2.954s (warm-up 0.710s not counted), 101547.5 images/s, accuracy 92.23%
+[78/96] threads_baseline_t32_b64_r3_inference (load avg 7.6)
+inference: 0.017s (warm-up 0.002s not counted), 600452.8 images/s, accuracy 92.23%
+[79/96] threads_baseline_t64_b64_r3_train (load avg 7.6)
+train: 3.331s (warm-up 0.719s not counted), 90062.7 images/s, accuracy 92.23%
+[80/96] threads_baseline_t64_b64_r3_inference (load avg 6.6)
+inference: 0.018s (warm-up 0.003s not counted), 557987.1 images/s, accuracy 92.23%
+[81/96] threads_baseline_t128_b64_r3_train (load avg 6.6)
+train: 4.136s (warm-up 0.724s not counted), 72532.3 images/s, accuracy 92.23%
+[82/96] threads_baseline_t128_b64_r3_inference (load avg 16.3)
+inference: 0.020s (warm-up 0.003s not counted), 492541.3 images/s, accuracy 92.23%
+[83/96] batch_baseline_t1_b32_r3_train (load avg 15.1)
+train: 4.079s (warm-up 0.703s not counted), 73546.8 images/s, accuracy 93.58%
+[84/96] batch_baseline_t1_b32_r3_inference (load avg 14.0)
+inference: 0.033s (warm-up 0.001s not counted), 298871.8 images/s, accuracy 93.58%
+[85/96] batch_baseline_t1_b64_r3_train (load avg 14.0)
+train: 2.678s (warm-up 0.710s not counted), 112031.5 images/s, accuracy 92.23%
+[86/96] batch_baseline_t1_b64_r3_inference (load avg 12.9)
+inference: 0.027s (warm-up 0.001s not counted), 367927.4 images/s, accuracy 92.23%
+[87/96] batch_baseline_t1_b128_r3_train (load avg 12.9)
+train: 1.959s (warm-up 0.704s not counted), 153161.8 images/s, accuracy 90.65%
+[88/96] batch_baseline_t1_b128_r3_inference (load avg 12.0)
+inference: 0.024s (warm-up 0.001s not counted), 411834.2 images/s, accuracy 90.65%
+[89/96] batch_baseline_t1_b256_r3_train (load avg 11.1)
+train: 1.602s (warm-up 0.706s not counted), 187283.0 images/s, accuracy 89.31%
+[90/96] batch_baseline_t1_b256_r3_inference (load avg 11.1)
+inference: 0.023s (warm-up 0.001s not counted), 436635.4 images/s, accuracy 89.31%
+[91/96] models_baseline_t1_b64_r3_train (load avg 10.3)
+train: 2.677s (warm-up 0.707s not counted), 112080.8 images/s, accuracy 92.23%
+[92/96] models_baseline_t1_b64_r3_inference (load avg 9.5)
+inference: 0.027s (warm-up 0.001s not counted), 367973.0 images/s, accuracy 92.23%
+[93/96] models_wide_t1_b64_r3_train (load avg 9.5)
+train: 4.005s (warm-up 0.709s not counted), 74908.0 images/s, accuracy 92.53%
+[94/96] models_wide_t1_b64_r3_inference (load avg 8.9)
+inference: 0.049s (warm-up 0.001s not counted), 205618.7 images/s, accuracy 92.53%
+[95/96] models_deep_t1_b64_r3_train (load avg 8.2)
+train: 3.063s (warm-up 0.706s not counted), 97940.6 images/s, accuracy 93.51%
+[96/96] models_deep_t1_b64_r3_inference (load avg 7.7)
+inference: 0.030s (warm-up 0.001s not counted), 331609.1 images/s, accuracy 93.51%
+
+Done. Results are in /home/Students/fwk14/Comp-Arch-Project/torch_results_final
+  pytorch_runs.csv     one row per run and phase
+  pytorch_summary.csv  mean/std/median/min/max per condition
+  system_info.txt      machine, OS and library versions
