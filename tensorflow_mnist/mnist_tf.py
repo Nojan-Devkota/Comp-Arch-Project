@@ -18,6 +18,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from statistics import mean, median, stdev
 
 # Hidden layer widths. Every model takes 784 inputs and ends in 10 logits.
 MODELS = {
@@ -35,6 +36,11 @@ FIELDS = [
     "learning_rate", "trial", "run_order", "phase",
     "elapsed_seconds", "warmup_seconds", "seconds_per_epoch",
     "samples", "steps", "images_per_second", "test_accuracy", "load_avg_1min",
+]
+# columns that get mean/std/median/min/max in the summary file
+NUMERIC_FIELDS = [
+    "elapsed_seconds", "warmup_seconds", "seconds_per_epoch",
+    "images_per_second", "test_accuracy",
 ]
 
 
@@ -302,7 +308,43 @@ def run_in_new_process(worker_args, tag, script=None, wrapper=()):
         return read_row(row_file)
 
 
-def run_study(a, run_once=run_in_new_process):
+def save_runs(path, rows, fields):
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fields, restval="", extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def save_summary(path, rows, numeric_fields):
+    """Mean, std, median, min and max of every condition over its trials."""
+    group_by = ("study", "model", "threads", "batch_size", "epochs", "phase")
+    stats = ("mean", "std", "median", "min", "max")
+    groups = {}
+    for row in rows:
+        key = tuple(str(row[k]) for k in group_by)
+        groups.setdefault(key, []).append(row)
+
+    columns = [*group_by, "trials"]
+    columns += [f"{field}_{s}" for field in numeric_fields for s in stats]
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=columns, restval="")
+        writer.writeheader()
+        for key, group in groups.items():
+            entry = dict(zip(group_by, key))
+            entry["trials"] = len(group)
+            for field in numeric_fields:
+                values = [float(r[field]) for r in group if r.get(field) not in ("", None)]
+                if not values:
+                    continue    # e.g. seconds_per_epoch for inference rows
+                entry[f"{field}_mean"] = round(mean(values), 6)
+                entry[f"{field}_std"] = round(stdev(values), 6) if len(values) > 1 else ""
+                entry[f"{field}_median"] = round(median(values), 6)
+                entry[f"{field}_min"] = round(min(values), 6)
+                entry[f"{field}_max"] = round(max(values), 6)
+            writer.writerow(entry)
+
+
+def run_study(a, run_once=run_in_new_process, fields=FIELDS, numeric_fields=NUMERIC_FIELDS):
     out = Path(a.output).resolve()
     (out / "weights").mkdir(parents=True, exist_ok=True)
     cpus = usable_cpus()
@@ -344,6 +386,14 @@ def run_study(a, run_once=run_in_new_process):
                 row["run_order"] = order
                 row["load_avg_1min"] = round(load, 2)
                 rows.append(row)
+                # rewrite both files after every run so a crash halfway
+                # through doesn't lose what's already been measured
+                save_runs(out / "tensorflow_runs.csv", rows, fields)
+                save_summary(out / "tensorflow_summary.csv", rows, numeric_fields)
+
+    print("\nDone. Results are in", out)
+    print("  tensorflow_runs.csv     one row per run and phase")
+    print("  tensorflow_summary.csv  mean/std/median/min/max per condition")
     return rows
 
 
