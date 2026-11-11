@@ -5,7 +5,11 @@ thread, batch size and model sweeps, all on the CPU.
 """
 
 import argparse
+import csv
+import math
 import os
+import platform
+import time
 
 # Hidden layer widths. Every model takes 784 inputs and ends in 10 logits.
 MODELS = {
@@ -16,6 +20,14 @@ MODELS = {
 THREAD_SWEEP = (1, 2, 4, 8, 16, 32, 64, 128)
 BATCH_SWEEP = (32, 64, 128, 256)
 STUDIES = ("baseline", "threads", "batch", "models")
+
+FIELDS = [
+    "framework", "framework_version", "python_version", "machine",
+    "study", "model", "parameters", "threads", "batch_size", "epochs",
+    "learning_rate", "trial", "run_order", "phase",
+    "elapsed_seconds", "warmup_seconds", "seconds_per_epoch",
+    "samples", "steps", "images_per_second", "test_accuracy", "load_avg_1min",
+]
 
 
 def build_parser():
@@ -35,6 +47,16 @@ def build_parser():
                    help="batch sizes for the batch study")
     p.add_argument("--model-list", default=",".join(MODELS),
                    help="models for the models study: " + ", ".join(MODELS))
+
+    # Only used when the script starts itself as a worker for a single run.
+    hidden = argparse.SUPPRESS
+    p.add_argument("--worker", action="store_true", help=hidden)
+    p.add_argument("--model", choices=list(MODELS), default="baseline", help=hidden)
+    p.add_argument("--phase", choices=["train", "inference"], default="train", help=hidden)
+    p.add_argument("--trial", type=int, default=1, help=hidden)
+    p.add_argument("--study-name", default="baseline", help=hidden)
+    p.add_argument("--row-file", default="row.csv", help=hidden)
+    p.add_argument("--weights-file", default="model.weights.h5", help=hidden)
     return p
 
 
@@ -118,3 +140,110 @@ def training_dataset(tf, x, y, batch_size, threads):
     options.threading.private_threadpool_size = threads
     options.threading.max_intra_op_parallelism = 1
     return data.with_options(options)
+
+
+def predict(model, x, batch_size):
+    import numpy as np
+
+    labels = []
+    for start in range(0, len(x), batch_size):
+        scores = model(x[start:start + batch_size], training=False).numpy()
+        labels.append(np.argmax(scores, axis=1))
+    return np.concatenate(labels)
+
+
+class Stopwatch:
+    """Wall-clock timer for the part of a run we actually measure."""
+
+    def __enter__(self):
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, *exc):
+        self.seconds = time.perf_counter() - self.start
+
+
+def run_worker(a, stopwatch=Stopwatch):
+    """One measurement: either training or inference, never both.
+
+    Start-up, data loading and warm-up happen outside the stopwatch.
+    The train run saves its weights so the inference run of the same
+    trial measures the same trained model.
+    """
+    tf = setup_tensorflow(a.threads, seed=1000 + a.trial)
+    import numpy as np
+
+    x_train, y_train, x_test, y_test = load_mnist(tf, a.train_samples)
+    model = build_model(tf, a.model, a.learning_rate)
+
+    if a.phase == "train":
+        data = training_dataset(tf, x_train, y_train, a.batch_size, a.threads)
+
+        # The first fit() traces and compiles the training step, which is a
+        # one-time cost PyTorch's eager loop doesn't have. Run two batches to
+        # get that out of the way, then put the seeded weights back so the
+        # timed run still starts from scratch.
+        start_weights = model.get_weights()
+        t0 = time.perf_counter()
+        model.fit(data.take(2), epochs=1, shuffle=False, verbose=0)
+        warmup = time.perf_counter() - t0
+        model.set_weights(start_weights)
+        model.optimizer.iterations.assign(0)
+
+        with stopwatch() as timer:
+            model.fit(data, epochs=a.epochs, shuffle=False, verbose=0)
+        model.save_weights(a.weights_file)
+
+        predictions = predict(model, x_test, a.batch_size)
+        samples = a.train_samples * a.epochs
+        steps = math.ceil(a.train_samples / a.batch_size) * a.epochs
+    else:
+        model.load_weights(a.weights_file)
+
+        t0 = time.perf_counter()
+        model(x_test[:a.batch_size], training=False).numpy()
+        warmup = time.perf_counter() - t0
+
+        with stopwatch() as timer:
+            predictions = predict(model, x_test, a.batch_size)
+        samples = len(x_test)
+        steps = math.ceil(len(x_test) / a.batch_size)
+
+    elapsed = timer.seconds
+    accuracy = float(np.mean(predictions == y_test))
+    row = dict.fromkeys(FIELDS, "")
+    row.update({
+        "framework": "tensorflow",
+        "framework_version": tf.__version__,
+        "python_version": platform.python_version(),
+        "machine": platform.machine(),
+        "study": a.study_name,
+        "model": a.model,
+        "parameters": model.count_params(),
+        "threads": a.threads,
+        "batch_size": a.batch_size,
+        "epochs": a.epochs,
+        "learning_rate": a.learning_rate,
+        "trial": a.trial,
+        "phase": a.phase,
+        "elapsed_seconds": round(elapsed, 6),
+        "warmup_seconds": round(warmup, 6),
+        "seconds_per_epoch": round(elapsed / a.epochs, 6) if a.phase == "train" else "",
+        "samples": samples,    # images processed in the timed part
+        "steps": steps,        # optimizer updates (train) or forward batches (inference)
+        "images_per_second": round(samples / elapsed, 2),
+        "test_accuracy": round(accuracy, 6),
+    })
+    with open(a.row_file, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=FIELDS)
+        writer.writeheader()
+        writer.writerow(row)
+
+    print(f"{a.phase}: {elapsed:.3f}s (warm-up {warmup:.3f}s not counted), "
+          f"{samples / elapsed:.1f} images/s, accuracy {accuracy:.2%}")
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    if args.worker:
+        run_worker(args)
