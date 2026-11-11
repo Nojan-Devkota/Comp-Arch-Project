@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# experiment output (weights are large; results get copied out when we analyze)
+tf_results/
+torch_results/
+*.weights.h5
