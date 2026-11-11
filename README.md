@@ -7,7 +7,8 @@ PyTorch and TensorFlow on the CPU, using MNIST.
 
 `tensorflow_mnist/mnist_tf.py` runs the experiments from section 1.3 of the
 proposal. All settings default to the baseline: 5 epochs, batch size 64,
-SGD with learning rate 0.01, float32, 1 intra-op thread, 784-128-10 model.
+SGD with learning rate 0.01, float32, 1 intra-op thread, 784-128-10 model,
+seed 42 for every run and no shuffling (same as the PyTorch side).
 
 | Study      | What changes                                  |
 |------------|-----------------------------------------------|

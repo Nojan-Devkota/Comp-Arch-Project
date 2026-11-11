@@ -31,6 +31,10 @@ THREAD_SWEEP = (1, 2, 4, 8, 16, 32, 64, 128)
 BATCH_SWEEP = (32, 64, 128, 256)
 STUDIES = ("baseline", "threads", "batch", "models")
 
+# Same seed for every run, in both frameworks, so all trials of a condition
+# start from the same weights and only the timing/counters vary.
+SEED = 42
+
 FIELDS = [
     "framework", "framework_version", "python_version", "machine",
     "study", "model", "parameters", "threads", "batch_size", "epochs",
@@ -185,7 +189,7 @@ def run_worker(a, stopwatch=Stopwatch):
     The train run saves its weights so the inference run of the same
     trial measures the same trained model.
     """
-    tf = setup_tensorflow(a.threads, seed=1000 + a.trial)
+    tf = setup_tensorflow(a.threads, seed=SEED)
     import numpy as np
 
     x_train, y_train, x_test, y_test = load_mnist(tf, a.train_samples)
