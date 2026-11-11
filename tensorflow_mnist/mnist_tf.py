@@ -13,6 +13,7 @@ import csv
 import math
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -308,6 +309,54 @@ def run_in_new_process(worker_args, tag, script=None, wrapper=()):
         return read_row(row_file)
 
 
+def read_text(path):
+    try:
+        return Path(path).read_text().strip()
+    except OSError:
+        return ""
+
+
+def write_system_info(out, cpus, extra=""):
+    """Machine, OS and library details for the report (proposal 1.2)."""
+    lines = [
+        f"Python: {platform.python_version()} ({sys.executable})",
+        f"Machine: {platform.machine()}",
+        f"Logical CPUs usable by this process: {cpus} (os.cpu_count() = {os.cpu_count()})",
+        "TF_ENABLE_ONEDNN_OPTS: "
+        + os.environ.get("TF_ENABLE_ONEDNN_OPTS", "unset (TensorFlow default)"),
+    ]
+
+    # ask a separate python for the versions so TensorFlow isn't loaded here
+    versions = subprocess.run(
+        [sys.executable, "-c",
+         "import numpy, tensorflow as tf; "
+         "print('tensorflow', tf.__version__); "
+         "print('keras', getattr(tf.keras, '__version__', 'unknown')); "
+         "print('numpy', numpy.__version__)"],
+        capture_output=True, text=True,
+        env={**os.environ, "TF_CPP_MIN_LOG_LEVEL": "2", "CUDA_VISIBLE_DEVICES": "-1"},
+    )
+    lines += ["", "== library versions ==", (versions.stdout or versions.stderr).strip()]
+
+    # frequency scaling / turbo settings affect timing, so keep them too
+    for path in ("/etc/os-release",
+                 "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
+                 "/sys/devices/system/cpu/intel_pstate/no_turbo",
+                 "/sys/devices/system/cpu/cpufreq/boost"):
+        text = read_text(path)
+        if text:
+            lines += ["", f"== {path} ==", text]
+
+    for cmd in (["uname", "-a"], ["lscpu"], ["free", "-h"]):
+        if shutil.which(cmd[0]):
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            lines += ["", "$ " + " ".join(cmd), (result.stdout or result.stderr).strip()]
+
+    if extra:
+        lines += ["", extra]
+    (out / "system_info.txt").write_text("\n".join(lines) + "\n")
+
+
 def save_runs(path, rows, fields):
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields, restval="", extrasaction="ignore")
@@ -350,6 +399,8 @@ def run_study(a, run_once=run_in_new_process, fields=FIELDS, numeric_fields=NUME
     cpus = usable_cpus()
     if a.threads > cpus:
         sys.exit(f"--threads {a.threads} is more than the {cpus} CPUs available")
+    write_system_info(out, cpus)
+    print("System details written to", out / "system_info.txt")
 
     plan = plan_runs(a, cpus)
     too_many = [n for n in a.thread_list if n > cpus]
@@ -394,6 +445,7 @@ def run_study(a, run_once=run_in_new_process, fields=FIELDS, numeric_fields=NUME
     print("\nDone. Results are in", out)
     print("  tensorflow_runs.csv     one row per run and phase")
     print("  tensorflow_summary.csv  mean/std/median/min/max per condition")
+    print("  system_info.txt         machine, OS and library versions")
     return rows
 
 
