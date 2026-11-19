@@ -135,6 +135,73 @@ time in both frameworks, with higher IPC and a lower cache miss rate: the
 larger matrix product is a more regular workload. The extra 64-unit layer
 adds 12 to 16 % to training time and gives the best accuracy.
 
+### Hardware counters by study
+
+Every counter was recorded for all 192 runs. The tables below give the
+training medians for the counters not covered above; the full set is in
+`results/comparison_summary.csv`.
+
+**Baseline.**
+
+| Counter (training)       | PyTorch | TensorFlow |
+|--------------------------|--------:|-----------:|
+| Task-clock (CPU time)    | 2.66 s  | 10.6 s     |
+| Cache misses per image   | 1,593   | 2,476      |
+| Branch misses per image  | 126     | 360        |
+| CPU migrations           | 0       | 0          |
+| Page faults              | 204     | 149,649    |
+
+TensorFlow's cache miss *rate* is lower (22 % vs 30 %), but only because it
+makes many more cache references. Per image it misses 55 % more often and
+mispredicts 2.9 times as many branches, so the lower rate is not an
+advantage. At 1 thread PyTorch uses a quarter of the CPU time.
+
+**Thread scaling (1, 8 and 128 threads).**
+
+| Counter (training)      | PyTorch                | TensorFlow             |
+|-------------------------|------------------------|------------------------|
+| Task-clock              | 2.7 s, 17.5 s, 524 s   | 10.8 s, 11.3 s, 15.2 s |
+| Instructions per image  | 73k, 96k, 611k         | 104k, 133k, 143k       |
+| CPU migrations          | 0, 0, 3                | 1, 30, 8,991           |
+| Branch miss rate        | 2.5 %, 1.5 %, 0.2 %    | 3.6 %, 3.1 %, 3.5 %    |
+
+With 8 or more threads PyTorch uses more CPU time than TensorFlow. Its
+idle workers spin in short wait loops: the loops add instructions but no
+useful work, and their branches are easy to predict, which is why the
+branch miss rate falls. TensorFlow's threads sleep instead, and the
+scheduler moves them between cores thousands of times at 128 threads.
+
+**Batch size (32 and 256).**
+
+| Counter (training)       | PyTorch          | TensorFlow        |
+|--------------------------|------------------|-------------------|
+| Task-clock               | 4.07 s, 1.61 s   | 11.7 s, 4.0 s     |
+| Cycles per image         | 50.1k, 19.7k     | 88.5k, 30.9k      |
+| Cache misses per image   | 2,886, 635       | 4,138, 1,155      |
+| Branch misses per image  | 242, 34          | 659, 120          |
+| Context switches         | 11, 6            | 46,960, 5,948     |
+
+Larger batches cut every per-image counter in both frameworks. TensorFlow's
+context switches fall in step with the number of training steps (about 5
+per step), which ties its switching to per-step scheduling rather than to
+the amount of computation.
+
+**Model shape (baseline, wide, deep).**
+
+| Counter                            | PyTorch               | TensorFlow             |
+|------------------------------------|-----------------------|------------------------|
+| Instructions per image (training)  | 73k, 128k, 85k        | 104k, 159k, 112k       |
+| Cycles per image (training)        | 32.7k, 49.0k, 37.8k   | 54.7k, 72.2k, 57.1k    |
+| Cache misses per image (training)  | 1,586, 2,040, 1,747   | 2,502, 3,793, 2,530    |
+| Context switches (training)        | 7, 10, 10             | 23,537, 23,537, 23,531 |
+| Inference time vs baseline         | -, +78 %, +11 %       | -, +9 %, +36 %         |
+
+TensorFlow's context switches do not change with model size, another sign
+that they come from the per-step loop. Its inference cost grows more with
+an extra layer (+36 %) than with twice the parameters (+9 %), which points
+to a fixed overhead per layer; PyTorch's cost follows the amount of
+arithmetic instead.
+
 ## Methodology
 
 **Workload.** MNIST digits, fully connected networks with ReLU, SGD with
