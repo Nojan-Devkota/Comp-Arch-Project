@@ -34,7 +34,8 @@ All numbers are medians of three trials on the baseline configuration
 | Context switches in training    | 5              | 23,535            | 4,700x  |
 
 1. **PyTorch is faster in every condition we tested**, by 1.5x to 3.6x in
-   training and 3.5x to 18x in inference, at the same accuracy.
+   training and 3.5x to 18x in inference, with comparable accuracy (the two
+   frameworks are never more than 0.35 points apart).
 2. **The training gap has two separate causes.** TensorFlow needs 1.7x more
    CPU cycles per image, and its cores also ran at less than half the clock
    speed (1.53 vs 3.69 GHz). Together with a slightly higher CPU utilization
@@ -156,6 +157,15 @@ makes many more cache references. Per image it misses 55 % more often and
 mispredicts 2.9 times as many branches, so the lower rate is not an
 advantage. At 1 thread PyTorch uses a quarter of the CPU time.
 
+The page faults are minor faults: the kernel mapping in memory the first
+time it is touched. PyTorch stays near 200 because it reuses the same
+buffers. TensorFlow keeps touching new memory, most likely because its
+allocator releases and requests memory during training. Its count varies
+between runs with identical settings (146k to 171k) and does not follow the
+number of steps closely. At roughly a microsecond each, these faults
+account for at most a few tenths of a second, a small part of the 6.8 s
+training gap. In inference both frameworks stay under 100.
+
 **Thread scaling (1, 8 and 128 threads).**
 
 | Counter (training)      | PyTorch                | TensorFlow             |
@@ -243,7 +253,10 @@ Ten events are recorded: task-clock, cycles, instructions, cache-references,
 cache-misses, branches, branch-misses, context-switches, cpu-migrations and
 page-faults. From these the scripts derive IPC, cache and branch miss rates,
 CPU utilization (task-clock / wall time), effective clock speed
-(cycles / task-clock) and per-image counts. The raw perf output of every run
+(cycles / task-clock) and per-image counts. CPU utilization is the average
+number of busy cores, not a percentage: 1.0 means one core busy for the
+whole run and 8.0 means eight. The CSV column keeps the name
+`cpu_utilization`. The raw perf output of every run
 is kept in `results/*/perf_raw/` so any CSV row can be checked against it.
 [PERF_PROFILING_NOTES.md](PERF_PROFILING_NOTES.md) explains the counters and
 formulas.
