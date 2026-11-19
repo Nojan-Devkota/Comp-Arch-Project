@@ -30,6 +30,8 @@ METRICS = [
     "instructions_per_sample", "cycles_per_sample",
     "cache_misses_per_sample", "branch_misses_per_sample",
     "context-switches", "cpu-migrations", "page-faults",
+    "task-clock", "cycles", "instructions", "cache-references",
+    "cache-misses", "branches", "branch-misses",
 ]
 
 # metrics shown side by side in the framework comparison
